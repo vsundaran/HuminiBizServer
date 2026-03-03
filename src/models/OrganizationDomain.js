@@ -17,7 +17,4 @@ const organizationDomainSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Index for fast lookup by domain during login
-organizationDomainSchema.index({ domain: 1 });
-
 module.exports = mongoose.model('OrganizationDomain', organizationDomainSchema);

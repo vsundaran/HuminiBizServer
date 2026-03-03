@@ -19,7 +19,4 @@ const organizationSchema = new mongoose.Schema(
   },
 );
 
-// Index for faster lookups
-organizationSchema.index({ name: 1 });
-
 module.exports = mongoose.model("Organization", organizationSchema);

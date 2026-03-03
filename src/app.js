@@ -30,13 +30,10 @@ app.get('/health', (req, res) => {
 });
 
 // Unknown route handler
-app.all('*', (req, res, next) => {
-    res.status(404).json({
-        success: false,
-        message: `Route ${req.originalUrl} not found`,
-        data: null,
-        error: null
-    });
+app.use((req, res) => {
+  res.status(404).json({
+    message: 'Route not found'
+  });
 });
 
 // Global Error Handler

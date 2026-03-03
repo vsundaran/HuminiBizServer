@@ -27,7 +27,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes for fast querying
-userSchema.index({ email: 1 });
 userSchema.index({ organizationId: 1 });
 
 module.exports = mongoose.model('User', userSchema);
