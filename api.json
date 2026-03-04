@@ -1,0 +1,532 @@
+{
+  "info": {
+    "name": "Humini Biz API",
+    "description": "API collection for Humini Biz backend including Multi-tenant Moments, Calling, and Reporting.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Admin Auth",
+      "item": [
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@company.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/request-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "request-otp"
+              ]
+            },
+            "description": "Request an OTP for an admin user."
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@company.com\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "verify-otp"
+              ]
+            },
+            "description": "Verify the OTP and receive an access token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Auth",
+      "item": [
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee@company.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/request-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "request-otp"
+              ]
+            },
+            "description": "Request an OTP for a standard user."
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee@company.com\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "verify-otp"
+              ]
+            },
+            "description": "Verify the OTP and receive an access token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"department\": \"Engineering\",\n  \"jobRole\": \"Software Engineer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "profile"
+              ]
+            },
+            "description": "Update name, department, and job role. Sets isProfileUpdated to true."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Get Master Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "Fetch all active categories and their subcategories."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Moments",
+      "item": [
+        {
+          "name": "Create Moment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"<CATEGORY_OBJECT_ID>\",\n  \"subcategoryId\": \"<SUBCATEGORY_OBJECT_ID>\",\n  \"description\": \"Great achievement!\",\n  \"startDateTime\": \"2026-03-05T00:00:00Z\",\n  \"endDateTime\": \"2026-03-06T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/moments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "moments"
+              ]
+            },
+            "description": "Create a new moment strictly scoped to the user's organization."
+          }
+        },
+        {
+          "name": "My Moments (Active & Expired)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/moments/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "moments",
+                "my"
+              ]
+            },
+            "description": "Fetch the logged-in user's previously created moments."
+          }
+        },
+        {
+          "name": "Live Moments Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/moments/live?limit=20&categoryId=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "moments",
+                "live"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Optional paging limit"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "Optional filter by category"
+                }
+              ]
+            },
+            "description": "Fetch active moments where start time is currently valid and end time hasn't passed."
+          }
+        },
+        {
+          "name": "Upcoming Moments Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/moments/upcoming?limit=20&categoryId=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "moments",
+                "upcoming"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Optional paging limit"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "Optional filter by category"
+                }
+              ]
+            },
+            "description": "Fetch upcoming moments starting within the next 2 hours."
+          }
+        },
+        {
+          "name": "Later Moments Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/moments/later?limit=20&categoryId=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "moments",
+                "later"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "categoryId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Fetch upcoming moments starting after 2 hours."
+          }
+        },
+        {
+          "name": "Toggle Visibility Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/moments/:id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "moments",
+                ":id",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<MOMENT_OBJECT_ID>"
+                }
+              ]
+            },
+            "description": "Toggle public visibility of a moment you created."
+          }
+        },
+        {
+          "name": "Like / Unlike a Moment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/moments/:id/like",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "moments",
+                ":id",
+                "like"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<MOMENT_OBJECT_ID>"
+                }
+              ]
+            },
+            "description": "Adds or removes a like constraint mapped to your identity and organization."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calls",
+      "item": [
+        {
+          "name": "Initiate Call",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverId\": \"<USER_OBJECT_ID>\",\n  \"momentId\": \"<MOMENT_OBJECT_ID>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/calls/initiate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "calls",
+                "initiate"
+              ]
+            },
+            "description": "Start a call. Will fail with 400 Bad Request if you or the receiver is currently busy. Returns an Agora RTC token globally scoped to this call context."
+          }
+        },
+        {
+          "name": "Update Call State",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\" // Or declined, ended, failed\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/calls/:id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "calls",
+                ":id",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<CALL_OBJECT_ID>"
+                }
+              ]
+            },
+            "description": "Change the state of the call. If accepted, returns your personalized Agora Token."
+          }
+        },
+        {
+          "name": "Get History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/calls?limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "calls"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Loads previous incoming and outgoing calls for the user within their organization."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Call Reports",
+      "item": [
+        {
+          "name": "Get Master Reasons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/call-reports/reasons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "call-reports",
+                "reasons"
+              ]
+            },
+            "description": "Fetches active report reasons matching the seeded global master data."
+          }
+        },
+        {
+          "name": "Submit Report",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callId\": \"<CALL_OBJECT_ID>\",\n  \"reasonId\": \"<REASON_OBJECT_ID>\",\n  \"description\": \"(Optional, but STRICTLY required if Reason name is 'Others')\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/call-reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "call-reports"
+              ]
+            },
+            "description": "Securely submits a report tracking cross-participant identity implicitly based on the Call reference."
+          }
+        }
+      ]
+    }
+  ]
+}
