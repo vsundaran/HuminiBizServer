@@ -5,7 +5,7 @@ const ReportReason = require('./src/models/ReportReason');
 
 dotenv.config();
 
-const DB_URI = process.env.DB_URI;
+const DB_URI = process.env.MONGO_URI;
 
 if (!DB_URI) {
   console.error("Please configure DB_URI in your .env file!");
