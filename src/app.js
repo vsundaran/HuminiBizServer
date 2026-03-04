@@ -5,9 +5,12 @@ const mongoSanitize = require('express-mongo-sanitize');
 const errorHandler = require('./middlewares/errorHandler');
 const connectDB = require('./config/db');
 
-// Import routes
-const authRoutes = require('./routes/auth.routes');
+// Route imports
 const adminRoutes = require('./routes/admin.routes');
+const authRoutes = require('./routes/auth.routes');
+const userRoutes = require('./routes/user.routes');
+const categoryRoutes = require('./routes/category.routes');
+const momentRoutes = require('./routes/moment.routes');
 
 // Connect to Database
 connectDB().then(() => {
@@ -27,9 +30,12 @@ app.use(express.json({ limit: '10kb' })); // Limit body size
 // Prevent NoSQL injection attacks
 app.use(mongoSanitize());
 
-// Routes
-app.use('/api/auth', authRoutes);
+// API Routes
 app.use('/api/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/moments', momentRoutes);
 
 // Health check endpoint for CI/CD & DevOps
 app.get('/health', (req, res) => {

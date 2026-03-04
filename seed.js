@@ -1,38 +1,103 @@
-require('dotenv').config();
 const mongoose = require('mongoose');
-const Organization = require('./src/models/Organization');
-const OrganizationDomain = require('./src/models/OrganizationDomain');
-const User = require('./src/models/User');
-const connectDB = require('./src/config/db');
+const dotenv = require('dotenv');
+const Category = require('./src/models/Category');
 
-const importData = async () => {
+dotenv.config();
+
+const DB_URI = process.env.DB_URI;
+
+if (!DB_URI) {
+  console.error("Please configure DB_URI in your .env file!");
+  process.exit(1);
+}
+
+const initializeMasterData = async () => {
     try {
-        await connectDB();
-        
-        // Clear existing test data
-        // await Organization.deleteMany();
-        // await OrganizationDomain.deleteMany();
-        // await User.deleteMany();
+        await mongoose.connect(DB_URI);
+        console.log("Connected to MongoDB");
 
-        // 1. Create Organization
-        const org = await Organization.create({
-            name: 'Arus Innovation Pvt Ltd',
-            status: 'ACTIVE'
-        });
+        const masterData = [
+            {
+                name: "Wishes",
+                subcategories: [
+                    { name: "Birthday" },
+                    { name: "Work Anniversary" },
+                    { name: "Joining Anniversary" },
+                    { name: "Promotion" },
+                    { name: "Farewell" },
+                    { name: "Welcome" },
+                    { name: "New Role" },
+                    { name: "Retirement" },
+                    { name: "Festival" },
+                    { name: "Success" },
+                    { name: "Good Luck" },
+                    { name: "Wedding" },
+                    { name: "Engagement" },
+                    { name: "Baby Arrival" },
+                    { name: "New Beginning" }
+                ]
+            },
+            {
+                name: "Motivation",
+                subcategories: [
+                    { name: "Daily" },
+                    { name: "Leadership" },
+                    { name: "Career Growth" },
+                    { name: "Success Mindset" },
+                    { name: "Hard Work & Discipline" },
+                    { name: "Team" },
+                    { name: "Startup" },
+                    { name: "Learning & Development" },
+                    { name: "Productivity" },
+                    { name: "Overcoming Challenges" },
+                    { name: "Positive Thinking" },
+                    { name: "Confidence Building" },
+                    { name: "Monday" },
+                    { name: "Goal Achievement" },
+                    { name: "Innovation" }
+                ]
+            },
+            {
+                name: "Celebration",
+                subcategories: [
+                    { name: "Team Achievement" },
+                    { name: "Project Completion" },
+                    { name: "Award Recognition" },
+                    { name: "Employee of the Month" },
+                    { name: "Company Milestone" },
+                    { name: "Promotion" },
+                    { name: "Work Anniversary" },
+                    { name: "Event" },
+                    { name: "Festival" },
+                    { name: "Sales Achievement" },
+                    { name: "Product Launch" },
+                    { name: "Partnership Announcement" },
+                    { name: "Office Event" },
+                    { name: "Success" },
+                    { name: "Appreciation" }
+                ]
+            }
+        ];
 
-        // 2. Create Domain mapping
-        await OrganizationDomain.create({
-            domain: 'arus.sg',
-            organizationId: org._id
-        });
+        console.log("Seeding Master Data (Categories)...");
 
-        console.log('✅ Base test data imported successfully!');
-        console.log('You can now test logging in with any email under the @acme.com domain (e.g., john@acme.com)');
-        process.exit();
+        for (const data of masterData) {
+            await Category.findOneAndUpdate(
+                { name: data.name },
+                { $set: data },
+                { upsert: true, new: true, runValidators: true }
+            );
+        }
+
+        console.log("Master data seeding completed successfully.");
+
     } catch (error) {
-        console.error('Error importing data:', error);
-        process.exit(1);
+        console.error("Error seeding master data:", error);
+    } finally {
+        await mongoose.disconnect();
+        console.log("Disconnected from MongoDB");
+        process.exit(0);
     }
 }
 
-importData();
+initializeMasterData();

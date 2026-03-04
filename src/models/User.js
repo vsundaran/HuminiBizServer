@@ -19,6 +19,22 @@ const userSchema = new mongoose.Schema({
     enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
     default: 'ACTIVE',
   },
+  name: {
+    type: String,
+    trim: true,
+  },
+  department: {
+    type: String,
+    trim: true,
+  },
+  jobRole: {
+    type: String,
+    trim: true,
+  },
+  isProfileUpdated: {
+    type: Boolean,
+    default: false,
+  },
   lastLoginAt: {
     type: Date,
   },

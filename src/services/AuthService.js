@@ -168,7 +168,10 @@ class AuthService {
             user: {
                 id: user._id,
                 email: user.email,
+                name: user.name,
+                jobRole: user.jobRole,
                 organization: user.organizationId.name,
+                isProfileUpdated: user.isProfileUpdated,
                 lastLoginAt: user.lastLoginAt
             }
         };
