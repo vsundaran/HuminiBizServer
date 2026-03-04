@@ -74,6 +74,80 @@ class CallService {
     }
 
     /**
+     * Initiate a random call for "meet someone new"
+     */
+    async initiateRandomCall(callerId, organizationId) {
+        const now = new Date();
+
+        // 1. You cannot call yourself, check if caller is already busy
+        const isCallerBusy = await this.isUserBusy(callerId);
+        if (isCallerBusy) {
+            throw new CustomError('You are already in an active call', 400);
+        }
+
+        // 2. Find all live moments in the organization not created by the caller
+        const liveMoments = await Moment.find({
+            organizationId,
+            userId: { $ne: callerId },
+            active: true,
+            startDateTime: { $lte: now },
+            endDateTime: { $gt: now }
+        }).lean();
+
+        if (!liveMoments || liveMoments.length === 0) {
+            throw new CustomError('No users are currently available to meet', 404);
+        }
+
+        // 3. Shuffle moments to randomly select one
+        const shuffledMoments = liveMoments.sort(() => 0.5 - Math.random());
+
+        // 4. Find the first non-busy user to call
+        let selectedMoment = null;
+        for (const moment of shuffledMoments) {
+            const isBusy = await this.isUserBusy(moment.userId);
+            if (!isBusy) {
+                selectedMoment = moment;
+                break;
+            }
+        }
+
+        if (!selectedMoment) {
+            throw new CustomError('All available users are currently busy on other calls', 404);
+        }
+
+        const receiverId = selectedMoment.userId;
+
+        // 5. Create the Call record
+        const call = new Call({
+            callerId,
+            receiverId,
+            momentId: selectedMoment._id,
+            organizationId,
+            status: 'ringing',
+            startedAt: new Date(),
+        });
+        
+        call.agoraChannelName = call._id.toString();
+        await call.save();
+
+        // 6. Generate Agora Token for the caller
+        const tokenInfo = AgoraService.generateRtcToken(call.agoraChannelName, 0, 'publisher');
+
+        // 7. Schedule Background Job for 30 second timeout using BullMQ
+        await callQueue.add('handle-call-timeout', 
+            { callId: call._id },
+            { delay: 30000 } // delay in milliseconds
+        );
+
+        return {
+            call,
+            token: tokenInfo.token,
+            channelName: tokenInfo.channelName,
+            agoraAppId: tokenInfo.appId
+        };
+    }
+
+    /**
      * Answer, Decline, or End a call securely mapped to the user and organization
      */
     async updateCallState(userId, organizationId, callId, newState) {

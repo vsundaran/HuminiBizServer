@@ -25,6 +25,28 @@ class CallController {
     }
 
     /**
+     * Initiate a random call (meet someone new)
+     * @route POST /api/calls/meet-new
+     */
+    async meetSomeoneNew(req, res, next) {
+        try {
+            const callerId = req.user.id;
+            const organizationId = req.user.organizationId;
+            
+            const result = await CallService.initiateRandomCall(callerId, organizationId);
+            
+            res.status(201).json({
+                success: true,
+                message: 'Random call initiated successfully',
+                data: result,
+                error: null
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
      * Update call state (accept, decline, end, fail)
      * @route PUT /api/calls/:id/status
      */

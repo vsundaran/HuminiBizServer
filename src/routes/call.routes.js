@@ -7,6 +7,7 @@ const { requireAuth } = require('../middlewares/auth.middleware');
 router.use(requireAuth);
 
 router.post('/initiate', callController.initiateCall);
+router.post('/meet-new', callController.meetSomeoneNew);
 router.put('/:id/status', callController.updateCallState);
 router.get('/', callController.getCallHistory);
 
