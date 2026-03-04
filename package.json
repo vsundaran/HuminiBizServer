@@ -6,7 +6,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "seed": "node seed.js",
+    "start:redis": "brew services start redis",
+    "stop:redis": "brew services stop redis",
+    "restart:redis": "brew services restart redis"
   },
   "keywords": [],
   "author": "",
