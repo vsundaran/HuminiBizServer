@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const Category = require('./src/models/Category');
+const ReportReason = require('./src/models/ReportReason');
 
 dotenv.config();
 
@@ -90,6 +91,26 @@ const initializeMasterData = async () => {
         }
 
         console.log("Master data seeding completed successfully.");
+
+        const reportReasons = [
+            { name: "Inappropriate Behavior" },
+            { name: "Asked for Personal Info" },
+            { name: "Sexual Content" },
+            { name: "Abusive Language" },
+            { name: "Others" }
+        ];
+
+        console.log("Seeding Master Data (Report Reasons)...");
+
+        for (const reason of reportReasons) {
+            await ReportReason.findOneAndUpdate(
+                { name: reason.name },
+                { $set: reason },
+                { upsert: true, new: true, runValidators: true }
+            );
+        }
+
+        console.log("Report Reasons seeding completed successfully.");
 
     } catch (error) {
         console.error("Error seeding master data:", error);

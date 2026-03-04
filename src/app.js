@@ -12,6 +12,7 @@ const userRoutes = require('./routes/user.routes');
 const categoryRoutes = require('./routes/category.routes');
 const momentRoutes = require('./routes/moment.routes');
 const callRoutes = require('./routes/call.routes');
+const callReportRoutes = require('./routes/callReport.routes');
 
 // Connect to Database
 connectDB().then(() => {
@@ -44,6 +45,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/moments', momentRoutes);
 app.use('/api/calls', callRoutes);
+app.use('/api/call-reports', callReportRoutes);
 
 // Health check endpoint for CI/CD & DevOps
 app.get('/health', (req, res) => {
