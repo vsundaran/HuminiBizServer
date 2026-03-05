@@ -137,11 +137,16 @@ class MomentService {
                 throw new Error("Invalid feed type");
         }
 
+        // Exclude the current user's own moments from the feed
         const query = { active: true, organizationId, ...dateFilter };
         if (categoryId) {
             query.categoryId = categoryId;
         }
 
+        // 1. Get total count matching the filters (before limit pagination)
+        const totalCount = await Moment.countDocuments(query);
+
+        // 2. Fetch actual documents
         let momentsQuery = Moment.find(query)
             .populate('categoryId', 'name subcategories')
             .populate('userId', 'name jobRole department') // Bring the user details directly
@@ -162,7 +167,7 @@ class MomentService {
 
         const likedMomentIds = new Set(userLikes.map(like => like.momentId.toString()));
 
-        return moments.map(moment => {
+        const mappedMoments = moments.map(moment => {
             let subcatName = null;
             if (moment.categoryId && moment.categoryId.subcategories) {
                 const subcat = moment.categoryId.subcategories.find(
@@ -181,8 +186,9 @@ class MomentService {
                 isLikedByMe: likedMomentIds.has(moment._id.toString())
             };
         });
-    }
 
+        return { moments: mappedMoments, totalCount };
+    }
 }
 
 module.exports = new MomentService();
