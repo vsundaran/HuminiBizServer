@@ -162,9 +162,17 @@ class AuthService {
         const accessToken = TokenService.generateAccessToken(tokenPayload);
         const refreshToken = TokenService.generateRefreshToken(tokenPayload);
 
+        // Persist refresh token (start a new token family)
+        const { family } = await TokenService.storeRefreshToken(
+            refreshToken,
+            user._id,
+            user.organizationId._id,
+        );
+
         return {
             accessToken,
             refreshToken,
+            tokenFamily: family,
             user: {
                 id: user._id,
                 email: user.email,
@@ -176,6 +184,54 @@ class AuthService {
             }
         };
     }
+
+    /**
+     * Rotate refresh token — issue a new access + refresh token pair.
+     * Revokes the old refresh token and stores the new one in the same family.
+     * @param {string} oldRefreshToken
+     */
+    async refreshTokens(oldRefreshToken) {
+        // Validate, detect reuse, and consume the old token
+        const { record, decoded } = await TokenService.validateAndConsumeRefreshToken(oldRefreshToken);
+
+        // Make sure user still exists and is active
+        const user = await User.findById(decoded.id).populate('organizationId', 'name status');
+        if (!user || user.status !== 'ACTIVE') {
+            throw new CustomError('User account is inactive', 403);
+        }
+
+        const tokenPayload = {
+            id: user._id,
+            email: user.email,
+            organizationId: user.organizationId._id,
+            role: decoded.role ?? 'User'
+        };
+
+        const newAccessToken  = TokenService.generateAccessToken(tokenPayload);
+        const newRefreshToken = TokenService.generateRefreshToken(tokenPayload);
+
+        // Store new refresh token in the SAME family to enable reuse detection
+        await TokenService.storeRefreshToken(
+            newRefreshToken,
+            user._id,
+            user.organizationId._id,
+            record.family,
+        );
+
+        return {
+            accessToken:  newAccessToken,
+            refreshToken: newRefreshToken,
+        };
+    }
+
+    /**
+     * Logout — revoke all refresh tokens for the user.
+     * @param {string} userId
+     */
+    async logout(userId) {
+        await TokenService.revokeAllUserTokens(userId);
+    }
 }
 
 module.exports = new AuthService();
+
