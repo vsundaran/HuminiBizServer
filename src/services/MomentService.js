@@ -26,14 +26,32 @@ class MomentService {
         const now = new Date();
 
         const myMoments = await Moment.find({ userId, organizationId })
-            .populate('categoryId', 'name')
+            .populate('categoryId', 'name subcategories')
             .sort({ createdAt: -1 })
             .lean();
+
+        const mappedMoments = myMoments.map(moment => {
+            let subcatName = null;
+            if (moment.categoryId && moment.categoryId.subcategories) {
+                const subcat = moment.categoryId.subcategories.find(
+                    s => s._id.toString() === moment.subcategoryId.toString()
+                );
+                if (subcat) {
+                    subcatName = subcat.name;
+                }
+                // Only send back the category name to avoid large payloads
+                moment.categoryId = { _id: moment.categoryId._id, name: moment.categoryId.name };
+            }
+            return {
+                ...moment,
+                subcategoryName: subcatName
+            };
+        });
 
         const activeMoments = [];
         const expiredMoments = [];
 
-        myMoments.forEach(moment => {
+        mappedMoments.forEach(moment => {
             if (moment.active && moment.endDateTime > now) {
                 activeMoments.push(moment);
             } else {
@@ -125,7 +143,7 @@ class MomentService {
         }
 
         let momentsQuery = Moment.find(query)
-            .populate('categoryId', 'name')
+            .populate('categoryId', 'name subcategories')
             .populate('userId', 'name jobRole department') // Bring the user details directly
             .sort({ startDateTime: 1 }); // Sort by soonest
 
@@ -145,9 +163,21 @@ class MomentService {
         const likedMomentIds = new Set(userLikes.map(like => like.momentId.toString()));
 
         return moments.map(moment => {
+            let subcatName = null;
+            if (moment.categoryId && moment.categoryId.subcategories) {
+                const subcat = moment.categoryId.subcategories.find(
+                    s => s._id.toString() === moment.subcategoryId.toString()
+                );
+                if (subcat) {
+                    subcatName = subcat.name;
+                }
+                moment.categoryId = { _id: moment.categoryId._id, name: moment.categoryId.name };
+            }
+            
             // Calculate "Ends in X m/h" or "Starts in X m/h" client can easily derive, but let's send standard dates
             return {
                 ...moment,
+                subcategoryName: subcatName,
                 isLikedByMe: likedMomentIds.has(moment._id.toString())
             };
         });
