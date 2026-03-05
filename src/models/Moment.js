@@ -25,7 +25,7 @@ const momentSchema = new mongoose.Schema(
       type: String,
       required: [true, "Moment description is required"],
       trim: true,
-      maxLength: 200,
+      maxLength: [200, "Description cannot exceed 200 characters"],
     },
     startDateTime: {
       type: Date,
@@ -34,6 +34,13 @@ const momentSchema = new mongoose.Schema(
     endDateTime: {
       type: Date,
       required: [true, "End date and time are required"],
+      // Data-integrity: end must be strictly after start
+      validate: {
+        validator: function (value) {
+          return this.startDateTime && value > this.startDateTime;
+        },
+        message: "End date and time must be after start date and time",
+      },
     },
     active: {
       type: Boolean,
@@ -42,6 +49,7 @@ const momentSchema = new mongoose.Schema(
     likeCount: {
       type: Number,
       default: 0,
+      min: 0,
     },
   },
   {
@@ -49,6 +57,10 @@ const momentSchema = new mongoose.Schema(
   }
 );
 
+// Compound index for fast feed queries (live/upcoming/later filtered by org + active status)
 momentSchema.index({ organizationId: 1, active: 1, startDateTime: 1, endDateTime: 1 });
+// Index for fetching a user's own moments
+momentSchema.index({ userId: 1, organizationId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Moment", momentSchema);
+
