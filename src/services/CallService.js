@@ -312,6 +312,43 @@ class CallService {
 
         return calls;
     }
+
+    /**
+     * Handle user disconnection. If they are in an active call, end it.
+     */
+    async handleUserDisconnect(userId, organizationId) {
+        try {
+            const activeCall = await Call.findOne({
+                organizationId,
+                $or: [{ callerId: userId }, { receiverId: userId }],
+                status: { $in: ['ringing', 'accepted', 'ongoing'] }
+            });
+
+            if (activeCall) {
+                console.log(`[CallService] User ${userId} disconnected while in an active call. Ending call ${activeCall._id}`);
+                
+                activeCall.status = 'ended';
+                activeCall.endedAt = new Date();
+                await activeCall.save();
+
+                const counterpartId = activeCall.callerId.toString() === userId.toString()
+                    ? activeCall.receiverId.toString()
+                    : activeCall.callerId.toString();
+
+                emitToUser(counterpartId, SOCKET_EVENTS.CALL_ENDED, { callId: activeCall._id.toString() });
+
+                const freePayload = { organizationId: activeCall.organizationId.toString(), isInCall: false };
+                emitToOrg(activeCall.organizationId.toString(), SOCKET_EVENTS.USER_CALL_STATUS_CHANGED, {
+                    ...freePayload, userId: activeCall.callerId.toString()
+                });
+                emitToOrg(activeCall.organizationId.toString(), SOCKET_EVENTS.USER_CALL_STATUS_CHANGED, {
+                    ...freePayload, userId: activeCall.receiverId.toString()
+                });
+            }
+        } catch (error) {
+            console.error('[CallService] Error handling user disconnect:', error);
+        }
+    }
 }
 
 module.exports = new CallService();

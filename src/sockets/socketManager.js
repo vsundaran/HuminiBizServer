@@ -63,6 +63,8 @@ const initSocketIO = (httpServer) => {
     socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
       console.log(`🔌 Socket disconnected: ${socket.id} | userId: ${userId} | reason: ${reason}`);
       userSocketMap.delete(userId);
+      const CallService = require('../services/CallService');
+      CallService.handleUserDisconnect(userId, organizationId);
     });
   });
 
