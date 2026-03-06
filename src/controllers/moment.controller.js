@@ -31,6 +31,16 @@ class MomentController {
             res.status(200).json({ success: true, message: 'Moment status updated', data: moment, error: null });
         } catch (error) { next(error); }
     }
+
+    async archiveMoment(req, res, next) {
+        try {
+            const userId = req.user.id;
+            const organizationId = req.user.organizationId;
+            const { id } = req.params;
+            const moment = await MomentService.archiveMoment(userId, organizationId, id);
+            res.status(200).json({ success: true, message: 'Moment archived', data: moment, error: null });
+        } catch (error) { next(error); }
+    }
     
     async toggleLikeMoment(req, res, next) {
         try {

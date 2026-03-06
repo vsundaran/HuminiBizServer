@@ -46,6 +46,14 @@ const momentSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // isArchived: user explicitly moved this moment to the Archive tab.
+    // This is separate from `active` (which the switch toggles ON/OFF).
+    // A moment can be inactive (active=false) but still in the Custom tab.
+    // Only when isArchived=true does it move to the Archive tab.
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
     likeCount: {
       type: Number,
       default: 0,
@@ -57,8 +65,8 @@ const momentSchema = new mongoose.Schema(
   }
 );
 
-// Compound index for fast feed queries (live/upcoming/later filtered by org + active status)
-momentSchema.index({ organizationId: 1, active: 1, startDateTime: 1, endDateTime: 1 });
+// Compound index for fast feed queries (live/upcoming/later filtered by org + active + not archived)
+momentSchema.index({ organizationId: 1, active: 1, isArchived: 1, startDateTime: 1, endDateTime: 1 });
 // Index for fetching a user's own moments
 momentSchema.index({ userId: 1, organizationId: 1, createdAt: -1 });
 

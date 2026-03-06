@@ -17,6 +17,8 @@ router.post(
 router.get('/my', momentController.getMyMoments);
 
 router.put('/:id/status', momentController.toggleMomentStatus);
+router.put('/:id/archive', momentController.archiveMoment);
+
 
 router.post('/:id/like', momentController.toggleLikeMoment);
 

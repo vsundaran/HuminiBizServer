@@ -22,7 +22,10 @@ class MomentService {
     }
 
     /**
-     * Get moments created by the logged-in user (split by active vs expired)
+     * Get moments created by the logged-in user.
+     * Split logic:
+     *   - customMoments  → not archived AND endDateTime in the future (can be active or inactive)
+     *   - archivedMoments → explicitly archived (isArchived=true) OR time has expired
      */
     async getMyMoments(userId, organizationId) {
         const now = new Date();
@@ -41,7 +44,6 @@ class MomentService {
                 if (subcat) {
                     subcatName = subcat.name;
                 }
-                // Only send back the category name to avoid large payloads
                 moment.categoryId = { _id: moment.categoryId._id, name: moment.categoryId.name };
             }
             return {
@@ -50,11 +52,12 @@ class MomentService {
             };
         });
 
-        const activeMoments = [];
-        const expiredMoments = [];
+        const activeMoments = [];   // Custom tab: not archived, still within time window
+        const expiredMoments = [];  // Archive tab: explicitly archived OR time expired
 
         mappedMoments.forEach(moment => {
-            if (moment.active && moment.endDateTime > now) {
+            const isExpired = moment.endDateTime <= now;
+            if (!moment.isArchived && !isExpired) {
                 activeMoments.push(moment);
             } else {
                 expiredMoments.push(moment);
@@ -65,7 +68,8 @@ class MomentService {
     }
 
     /**
-     * Set a moment's status to active or inactive
+     * Set a moment's active status (ON/OFF toggle — does NOT archive).
+     * The moment stays in the Custom tab regardless of active value.
      */
     async toggleMomentStatus(userId, organizationId, momentId, activeStatus) {
         const moment = await Moment.findOne({ _id: momentId, userId, organizationId });
@@ -74,6 +78,20 @@ class MomentService {
         }
 
         moment.active = activeStatus;
+        await moment.save();
+        return moment;
+    }
+
+    /**
+     * Archive a moment — moves it to the Archive tab.
+     * Sets isArchived=true. This is irreversible from the UI.
+     */
+    async archiveMoment(userId, organizationId, momentId) {
+        const moment = await Moment.findOne({ _id: momentId, userId, organizationId });
+        if (!moment) {
+            throw new CustomError('Moment not found or unauthorized', 404);
+        }
+        moment.isArchived = true;
         await moment.save();
         return moment;
     }
@@ -139,8 +157,8 @@ class MomentService {
                 throw new Error("Invalid feed type");
         }
 
-        // Exclude the current user's own moments from the feed
-        const query = { active: true, userId: { $ne: userId }, organizationId, ...dateFilter };
+        // Exclude the current user's own moments AND archived moments from the feed
+        const query = { active: true, isArchived: { $ne: true }, userId: { $ne: userId }, organizationId, ...dateFilter };
         if (categoryId) {
             query.categoryId = categoryId;
         }
