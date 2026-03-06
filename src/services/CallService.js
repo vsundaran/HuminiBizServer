@@ -1,8 +1,12 @@
 const Call = require('../models/Call');
 const Moment = require('../models/Moment');
+const User = require('../models/User');
 const AgoraService = require('./AgoraService');
 const CustomError = require('../utils/CustomError');
 const { callQueue } = require('../jobs/queue');
+const { emitToOrg, emitToUser } = require('../sockets/socketManager');
+const SOCKET_EVENTS = require('../sockets/events');
+
 
 class CallService {
     
@@ -23,13 +27,17 @@ class CallService {
      */
     async initiateCall(callerId, receiverId, momentId, organizationId) {
         // 1. Validate moment exists and is in the same organization
-        const moment = await Moment.findOne({ _id: momentId, organizationId });
+        const [moment, callerUser] = await Promise.all([
+            Moment.findOne({ _id: momentId, organizationId }).populate('categoryId').lean(),
+            User.findById(callerId).select('name jobRole').lean(),
+        ]);
+
         if (!moment) {
             throw new CustomError('Moment not found or unauthorized', 404);
         }
 
         // 2. You cannot call yourself
-        if (callerId === receiverId) {
+        if (callerId.toString() === receiverId.toString()) {
             throw new CustomError('Cannot initiate a call to yourself', 400);
         }
 
@@ -50,7 +58,6 @@ class CallService {
             organizationId,
             status: 'ringing',
             startedAt: new Date(),
-            // Using the new call's ID as the unique Agora channel name
         });
         
         call.agoraChannelName = call._id.toString();
@@ -62,14 +69,44 @@ class CallService {
         // 6. Schedule Background Job for 30 second timeout using BullMQ
         await callQueue.add('handle-call-timeout', 
             { callId: call._id },
-            { delay: 30000 } // delay in milliseconds
+            { delay: 30000 }
         );
+
+        // 7. Notify org room: both caller and receiver are now busy
+        const busyPayload = { organizationId, isInCall: true };
+        emitToOrg(organizationId.toString(), SOCKET_EVENTS.USER_CALL_STATUS_CHANGED, {
+            ...busyPayload, userId: callerId.toString()
+        });
+        emitToOrg(organizationId.toString(), SOCKET_EVENTS.USER_CALL_STATUS_CHANGED, {
+            ...busyPayload, userId: receiverId.toString()
+        });
+
+        // Extract category & subcategory names
+        const categoryName = moment.categoryId?.name || '';
+        const subcategories = moment.categoryId?.subcategories || [];
+        const subcategory = subcategories.find(s => s._id.toString() === moment.subcategoryId.toString());
+        const subcategoryName = subcategory ? subcategory.name : '';
+
+        // 8. Notify receiver of incoming call via direct socket (enriched with caller info)
+        emitToUser(receiverId.toString(), SOCKET_EVENTS.INCOMING_CALL, {
+            callId: call._id.toString(),
+            callerId: callerId.toString(),
+            callerName: callerUser?.name || 'Unknown',
+            callerRole: callerUser?.jobRole || '',
+            momentId: momentId.toString(),
+            categoryName,
+            subcategoryName,
+            momentDescription: moment.description || '',
+            channelName: tokenInfo.channelName,
+            agoraAppId: tokenInfo.appId,
+        });
 
         return {
             call,
             token: tokenInfo.token,
             channelName: tokenInfo.channelName,
-            agoraAppId: tokenInfo.appId
+            agoraAppId: tokenInfo.appId,
+            receiverId: receiverId.toString(),
         };
     }
 
@@ -79,7 +116,7 @@ class CallService {
     async initiateRandomCall(callerId, organizationId) {
         const now = new Date();
 
-        // 1. You cannot call yourself, check if caller is already busy
+        // 1. Check if caller is already busy
         const isCallerBusy = await this.isUserBusy(callerId);
         if (isCallerBusy) {
             throw new CustomError('You are already in an active call', 400);
@@ -92,7 +129,7 @@ class CallService {
             active: true,
             startDateTime: { $lte: now },
             endDateTime: { $gt: now }
-        }).lean();
+        }).populate('categoryId').lean();
 
         if (!liveMoments || liveMoments.length === 0) {
             throw new CustomError('No users are currently available to meet', 404);
@@ -117,7 +154,10 @@ class CallService {
 
         const receiverId = selectedMoment.userId;
 
-        // 5. Create the Call record
+        // 5. Fetch caller info for the INCOMING_CALL payload
+        const callerUser = await User.findById(callerId).select('name jobRole').lean();
+
+        // 6. Create the Call record
         const call = new Call({
             callerId,
             receiverId,
@@ -130,20 +170,50 @@ class CallService {
         call.agoraChannelName = call._id.toString();
         await call.save();
 
-        // 6. Generate Agora Token for the caller
+        // 7. Generate Agora Token for the caller
         const tokenInfo = AgoraService.generateRtcToken(call.agoraChannelName, 0, 'publisher');
 
-        // 7. Schedule Background Job for 30 second timeout using BullMQ
+        // 8. Schedule Background Job for 30 second timeout using BullMQ
         await callQueue.add('handle-call-timeout', 
             { callId: call._id },
-            { delay: 30000 } // delay in milliseconds
+            { delay: 30000 }
         );
+
+        // 9. Notify org room: both caller and receiver are now busy
+        const busyPayload = { organizationId, isInCall: true };
+        emitToOrg(organizationId.toString(), SOCKET_EVENTS.USER_CALL_STATUS_CHANGED, {
+            ...busyPayload, userId: callerId.toString()
+        });
+        emitToOrg(organizationId.toString(), SOCKET_EVENTS.USER_CALL_STATUS_CHANGED, {
+            ...busyPayload, userId: receiverId.toString()
+        });
+
+        // Extract category & subcategory names
+        const categoryName = selectedMoment.categoryId?.name || '';
+        const subcategories = selectedMoment.categoryId?.subcategories || [];
+        const subcategory = subcategories.find(s => s._id.toString() === selectedMoment.subcategoryId.toString());
+        const subcategoryName = subcategory ? subcategory.name : '';
+
+        // 10. Notify receiver of incoming call via direct socket (enriched with caller info)
+        emitToUser(receiverId.toString(), SOCKET_EVENTS.INCOMING_CALL, {
+            callId: call._id.toString(),
+            callerId: callerId.toString(),
+            callerName: callerUser?.name || 'Unknown',
+            callerRole: callerUser?.jobRole || '',
+            momentId: selectedMoment._id.toString(),
+            categoryName,
+            subcategoryName,
+            momentDescription: selectedMoment.description || '',
+            channelName: tokenInfo.channelName,
+            agoraAppId: tokenInfo.appId,
+        });
 
         return {
             call,
             token: tokenInfo.token,
             channelName: tokenInfo.channelName,
-            agoraAppId: tokenInfo.appId
+            agoraAppId: tokenInfo.appId,
+            receiverId: receiverId.toString(),
         };
     }
 
@@ -180,11 +250,41 @@ class CallService {
 
         await call.save();
 
-        // If a user *accepts* the call, we also generate a token for them to join
+        // If a user *accepts* the call, also generate a token for them to join
         let tokenInfo = null;
         if (newState === 'accepted') {
-            // Also update to 'ongoing' depending on client standard, or keep 'accepted'
             tokenInfo = AgoraService.generateRtcToken(call.agoraChannelName, 0, 'publisher');
+
+            // Notify caller that call was accepted (send token so they can start the stream)
+            emitToUser(call.callerId.toString(), SOCKET_EVENTS.CALL_ACCEPTED, {
+                callId: call._id.toString(),
+                channelName: call.agoraChannelName,
+                token: tokenInfo.token,
+                agoraAppId: tokenInfo.appId,
+            });
+        }
+
+        // When the call ends (any terminal state) → notify org that both users are free again
+        const terminalStates = ['ended', 'declined', 'failed'];
+        if (terminalStates.includes(newState)) {
+            const freePayload = { organizationId: call.organizationId.toString(), isInCall: false };
+            emitToOrg(call.organizationId.toString(), SOCKET_EVENTS.USER_CALL_STATUS_CHANGED, {
+                ...freePayload, userId: call.callerId.toString()
+            });
+            emitToOrg(call.organizationId.toString(), SOCKET_EVENTS.USER_CALL_STATUS_CHANGED, {
+                ...freePayload, userId: call.receiverId.toString()
+            });
+
+            // Notify the specific counterpart of the call ending/declining
+            const counterpartId = userId.toString() === call.callerId.toString()
+                ? call.receiverId.toString()
+                : call.callerId.toString();
+
+            if (newState === 'declined') {
+                emitToUser(counterpartId, SOCKET_EVENTS.CALL_DECLINED, { callId: call._id.toString() });
+            } else {
+                emitToUser(counterpartId, SOCKET_EVENTS.CALL_ENDED, { callId: call._id.toString() });
+            }
         }
 
         return {

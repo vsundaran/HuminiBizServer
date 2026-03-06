@@ -1,6 +1,8 @@
 const Moment = require('../models/Moment');
 const MomentLike = require('../models/MomentLike');
+const Call = require('../models/Call');
 const CustomError = require('../utils/CustomError');
+
 
 class MomentService {
 
@@ -167,6 +169,25 @@ class MomentService {
 
         const likedMomentIds = new Set(userLikes.map(like => like.momentId.toString()));
 
+        // For live moments: batch-check which creators are currently in an active call
+        // This gives the accurate "isInCall" at the time of the API fetch.
+        // WebSocket events will keep this up-to-date in real-time after initial load.
+        let busyUserIds = new Set();
+        if (type === 'live' && moments.length > 0) {
+            const creatorIds = [...new Set(moments.map(m => m.userId?._id?.toString() || m.userId?.toString()))].filter(Boolean);
+            const activeCalls = await Call.find({
+                $or: [
+                    { callerId: { $in: creatorIds }, status: { $in: ['ringing', 'accepted', 'ongoing'] } },
+                    { receiverId: { $in: creatorIds }, status: { $in: ['ringing', 'accepted', 'ongoing'] } }
+                ]
+            }).select('callerId receiverId').lean();
+
+            activeCalls.forEach(call => {
+                busyUserIds.add(call.callerId.toString());
+                busyUserIds.add(call.receiverId.toString());
+            });
+        }
+
         const mappedMoments = moments.map(moment => {
             let subcatName = null;
             if (moment.categoryId && moment.categoryId.subcategories) {
@@ -179,11 +200,15 @@ class MomentService {
                 moment.categoryId = { _id: moment.categoryId._id, name: moment.categoryId.name };
             }
             
+            // Determine the creator's user ID (after populate, userId is an object)
+            const creatorId = moment.userId?._id?.toString() || moment.userId?.toString() || '';
+            
             // Calculate "Ends in X m/h" or "Starts in X m/h" client can easily derive, but let's send standard dates
             return {
                 ...moment,
                 subcategoryName: subcatName,
-                isLikedByMe: likedMomentIds.has(moment._id.toString())
+                isLikedByMe: likedMomentIds.has(moment._id.toString()),
+                isInCall: busyUserIds.has(creatorId),
             };
         });
 

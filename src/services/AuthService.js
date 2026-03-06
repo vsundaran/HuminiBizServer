@@ -179,6 +179,7 @@ class AuthService {
                 name: user.name,
                 jobRole: user.jobRole,
                 organization: user.organizationId.name,
+                organizationId: user.organizationId._id,
                 isProfileUpdated: user.isProfileUpdated,
                 lastLoginAt: user.lastLoginAt
             }
