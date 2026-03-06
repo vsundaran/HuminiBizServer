@@ -138,7 +138,7 @@ class MomentService {
         }
 
         // Exclude the current user's own moments from the feed
-        const query = { active: true, organizationId, ...dateFilter };
+        const query = { active: true, userId: { $ne: userId }, organizationId, ...dateFilter };
         if (categoryId) {
             query.categoryId = categoryId;
         }
